@@ -56,7 +56,7 @@ jobs:
 
           validation_dir="$(mktemp -d)"
           cp .terraform.lock.hcl fleet.auto.tfvars.json ./*.tf "$validation_dir/"
-          rm "$validation_dir/backend.tf" "$validation_dir/migration.tf"
+          rm "$validation_dir/backend.tf"
           (
             cd "$validation_dir"
             tofu init -backend=false -input=false -lockfile=readonly

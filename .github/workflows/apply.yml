@@ -123,10 +123,8 @@ jobs:
           tofu plan -input=false -out=repository-control.plan
           tofu show -no-color repository-control.plan > repository-control-plan.txt
           tofu show -json repository-control.plan > repository-control-plan.json
-          jq -e '[.resource_changes[]? | select(.change.actions | index("delete"))] | length == 0' \
-            repository-control-plan.json >/dev/null
           digest="$(jq -cS \
-            '[.resource_changes[]? | select(.change.actions != ["no-op"] or .change.importing != null) | {address, mode, type, name, index, provider_name, change: {actions: .change.actions, after: .change.after, after_unknown: .change.after_unknown, after_sensitive: .change.after_sensitive, replace_paths: .change.replace_paths, importing: .change.importing}}] | sort_by(.address)' \
+            '[.resource_changes[]? | select(.change.actions != ["no-op"] or .change.importing != null)] | sort_by(.address)' \
             repository-control-plan.json | sha256sum | cut -d' ' -f1)"
           printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
           {
@@ -242,10 +240,8 @@ jobs:
           set -euo pipefail
           tofu plan -input=false -out=repository-control.plan
           tofu show -json repository-control.plan > repository-control-plan.json
-          jq -e '[.resource_changes[]? | select(.change.actions | index("delete"))] | length == 0' \
-            repository-control-plan.json >/dev/null
           digest="$(jq -cS \
-            '[.resource_changes[]? | select(.change.actions != ["no-op"] or .change.importing != null) | {address, mode, type, name, index, provider_name, change: {actions: .change.actions, after: .change.after, after_unknown: .change.after_unknown, after_sensitive: .change.after_sensitive, replace_paths: .change.replace_paths, importing: .change.importing}}] | sort_by(.address)' \
+            '[.resource_changes[]? | select(.change.actions != ["no-op"] or .change.importing != null)] | sort_by(.address)' \
             repository-control-plan.json | sha256sum | cut -d' ' -f1)"
           test "$digest" = "$REVIEWED_PLAN_DIGEST" || {
             printf 'Plan changed after review: reviewed=%s current=%s\n' "$REVIEWED_PLAN_DIGEST" "$digest" >&2

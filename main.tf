@@ -20,6 +20,13 @@ locals {
   }
 }
 
+import {
+  for_each = local.repositories
+
+  to = github_repository.managed[each.key]
+  id = each.value.name
+}
+
 resource "github_repository" "managed" {
   for_each = local.repositories
 

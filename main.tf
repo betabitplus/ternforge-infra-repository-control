@@ -93,11 +93,11 @@ resource "github_actions_variable" "release_client_id" {
   value         = var.release_client_id
 }
 
-resource "github_app_installation_repository" "release" {
-  for_each = local.release_repositories
-
+resource "github_app_installation_repositories" "release" {
   installation_id = var.release_app_installation_id
-  repository      = github_repository.managed[each.key].name
+  selected_repositories = sort([
+    for repository in keys(local.release_repositories) : github_repository.managed[repository].name
+  ])
 }
 
 resource "github_repository_ruleset" "main" {

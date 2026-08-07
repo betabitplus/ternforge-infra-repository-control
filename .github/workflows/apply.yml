@@ -105,7 +105,9 @@ jobs:
             https://api.github.com/user
           scopes="$(awk -F': ' 'tolower($1)=="x-oauth-scopes" {gsub("\r", "", $2); print $2}' headers.txt)"
           rm -f headers.txt
-          test "$scopes" = "repo, workflow" || {
+          actual_scopes="$(printf '%s\n' "$scopes" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | sort | paste -sd, -)"
+          expected_scopes="read:user,repo,workflow"
+          test "$actual_scopes" = "$expected_scopes" || {
             printf 'Unexpected classic PAT scopes: %s\n' "$scopes" >&2
             exit 1
           }

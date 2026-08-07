@@ -18,6 +18,8 @@ Use the protected GitHub Actions environment `repository-control-apply` and the 
 
 The `bootstrap=true` path exists only for Task 0005 adoption and initial `ternforge-infra-updates` creation. Remove that bootstrap surface after Task 0005 acceptance.
 
+The repository-control classic PAT has exactly `repo`, `workflow`, and `read:user`: `repo` mutates repositories/App membership, `workflow` permits bootstrap workflow files, and provider `6.13.0` needs read-only `read:user` to refresh selected-repository App membership through GitHub's user-installation list endpoint.
+
 ## Drift
 
 A clean fleet must return exit code 0:

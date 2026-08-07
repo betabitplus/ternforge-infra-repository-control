@@ -2,12 +2,6 @@ name: repository control
 
 on:
   workflow_dispatch:
-    inputs:
-      bootstrap:
-        description: Run the one-time Task 0005 adoption and infra-updates bootstrap.
-        required: true
-        type: boolean
-        default: true
 
 permissions:
   contents: read
@@ -73,16 +67,9 @@ jobs:
             '.credentials[$host].token | type == "string" and length > 20' \
             "$HOME/.terraform.d/credentials.tfrc.json" >/dev/null
 
-      - name: Enforce and read back state-only Scalr workspace
+      - name: Read back state-only Scalr workspace
         run: |
           set -euo pipefail
-          scalr -quiet update-workspace \
-            -workspace="$SCALR_WORKSPACE_ID" \
-            -execution-mode=local \
-            -operations=false \
-            -remote-backend=true \
-            -iac-platform=opentofu \
-            -terraform-version=1.12.5
           scalr -format=json get-workspace -workspace="$SCALR_WORKSPACE_ID" > workspace.json
           jq -e '
             ."execution-mode" == "local" and
@@ -94,7 +81,11 @@ jobs:
           ' workspace.json >/dev/null
           scalr -format=json get-runs -filter-workspace="$SCALR_WORKSPACE_ID" > runs.json
           jq -e 'length == 0' runs.json >/dev/null
-          rm -f workspace.json runs.json
+          scalr -format=json get-variables -filter-workspace="$SCALR_WORKSPACE_ID" > variables.json
+          jq -e 'length == 0' variables.json >/dev/null
+          scalr -format=json list-provider-configuration-links -workspace="$SCALR_WORKSPACE_ID" > provider-links.json
+          jq -e 'length == 0' provider-links.json >/dev/null
+          rm -f workspace.json runs.json variables.json provider-links.json
 
       - name: Verify repository-control PAT scopes and frozen baseline
         run: |
@@ -120,107 +111,6 @@ jobs:
           tofu fmt -check -recursive
           tofu init -input=false -lockfile=readonly
           tofu validate
-
-      - name: Adopt existing repositories
-        if: ${{ inputs.bootstrap }}
-        run: |
-          set -euo pipefail
-
-          state_has() {
-            tofu state list | grep -Fx -- "$1" >/dev/null 2>&1
-          }
-
-          import_if_missing() {
-            address="$1"
-            id="$2"
-            if ! state_has "$address"; then
-              tofu import -input=false "$address" "$id"
-            fi
-          }
-
-          existing=(
-            ternforge-infra-ci
-            ternforge-infra-repository-control
-            ternforge-template-components
-            ternforge-template-infra-repository
-            ternforge-template-py-library
-            ternforge-tooling-py-policy
-            ternforge-tooling-py-runtime
-            ternforge-tooling-py-testkit
-          )
-          release=(
-            ternforge-infra-ci
-            ternforge-template-components
-            ternforge-template-infra-repository
-            ternforge-template-py-library
-            ternforge-tooling-py-policy
-            ternforge-tooling-py-runtime
-            ternforge-tooling-py-testkit
-          )
-
-          for repo in "${existing[@]}"; do
-            key="betabitplus/${repo}"
-            import_if_missing "github_repository.managed[\"${key}\"]" "$repo"
-            import_if_missing "github_branch_default.main[\"${key}\"]" "$repo"
-            import_if_missing "github_workflow_repository_permissions.managed[\"${key}\"]" "$repo"
-            if [ "$repo" != "ternforge-infra-repository-control" ]; then
-              import_if_missing "github_repository_vulnerability_alerts.managed[\"${key}\"]" "$repo"
-
-              main_id="$(gh api "repos/betabitplus/${repo}/rulesets" \
-                --jq '.[] | select(.name == "main" and .target == "branch") | .id')"
-              tag_id="$(gh api "repos/betabitplus/${repo}/rulesets" \
-                --jq '.[] | select(.name == "release-tags" and .target == "tag") | .id')"
-              test -n "$main_id"
-              test -n "$tag_id"
-              import_if_missing "github_repository_ruleset.main[\"${key}\"]" "${repo}:${main_id}"
-              import_if_missing "github_repository_ruleset.release_tags[\"${key}\"]" "${repo}:${tag_id}"
-            fi
-          done
-
-          for repo in "${release[@]}"; do
-            key="betabitplus/${repo}"
-            import_if_missing "github_actions_variable.release_client_id[\"${key}\"]" \
-              "${repo}:TERNFORGE_RELEASE_CLIENT_ID"
-            import_if_missing "github_app_installation_repository.release[\"${key}\"]" \
-              "151536616:${repo}"
-          done
-
-      - name: Create infra-updates repository declaratively
-        if: ${{ inputs.bootstrap }}
-        run: |
-          set -euo pipefail
-          address='github_repository.managed["betabitplus/ternforge-infra-updates"]'
-          if ! tofu state list | grep -Fx -- "$address" >/dev/null 2>&1; then
-            tofu apply -auto-approve -input=false -target="$address"
-          fi
-
-      - name: Bootstrap infra-updates main from released template
-        if: ${{ inputs.bootstrap }}
-        run: |
-          set -euo pipefail
-          if ! gh api repos/betabitplus/ternforge-infra-updates/branches/main >/dev/null 2>&1; then
-            python3 -m pip install --disable-pip-version-check 'copier==9.17.0'
-            copier --version | grep -Fx 'copier 9.17.0'
-            render="$(mktemp -d)"
-            copier copy \
-              https://github.com/betabitplus/ternforge-template-infra-repository.git \
-              "$render" \
-              --vcs-ref v1.1.0 \
-              --defaults \
-              --data repository_name=ternforge-infra-updates \
-              --data repository_description='Full-fleet update delivery for Ternforge repositories.'
-            mkdir -p "$render/.github/workflows"
-            cp bootstrap/infra-updates-ci.yml "$render/.github/workflows/ci.yml"
-            git -C "$render" init -b main
-            git -C "$render" config user.name github-actions[bot]
-            git -C "$render" config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git -C "$render" add .
-            git -C "$render" commit -m 'chore: bootstrap ternforge-infra-updates'
-            git -C "$render" remote add origin https://github.com/betabitplus/ternforge-infra-updates.git
-            gh auth setup-git
-            git -C "$render" push origin main
-            rm -rf "$render"
-          fi
 
       - name: Review and apply repository-control plan
         run: |

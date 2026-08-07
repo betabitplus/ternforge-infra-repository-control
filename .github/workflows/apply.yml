@@ -1,0 +1,247 @@
+name: repository control
+
+on:
+  workflow_dispatch:
+    inputs:
+      bootstrap:
+        description: Run the one-time Task 0005 adoption and infra-updates bootstrap.
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  SCALR_HOSTNAME: betabitplus-ternforge.scalr.io
+  SCALR_SA_EMAIL: ternforge-repository-control-github@betabitplus-ternforge.scalr.io
+  SCALR_CLI_VERSION: 0.18.0
+  SCALR_WORKSPACE_ID: ws-v0pc7dbrm7g2p3aat
+  FROZEN_BASELINE_SHA: d59582375855cff69fb165e467dc5847bc75ca99
+  GITHUB_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
+  GH_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
+
+concurrency:
+  group: repository-control-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: repository control / apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: repository-control-apply
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: 1.12.5
+          tofu_wrapper: false
+
+      - name: Install pinned Scalr CLI
+        run: |
+          set -euo pipefail
+          base="https://github.com/Scalr/scalr-cli/releases/download/v${SCALR_CLI_VERSION}"
+          archive="scalr-cli_${SCALR_CLI_VERSION}_linux_amd64.zip"
+          curl -fsSLO "${base}/${archive}"
+          curl -fsSLO "${base}/scalr-cli_${SCALR_CLI_VERSION}_SHA256SUMS"
+          grep " ${archive}$" "scalr-cli_${SCALR_CLI_VERSION}_SHA256SUMS" | sha256sum --check --strict
+          unzip -q "$archive"
+          sudo install -m 0755 scalr /usr/local/bin/scalr
+          scalr -version
+          rm -f "$archive" "scalr-cli_${SCALR_CLI_VERSION}_SHA256SUMS" scalr
+
+      - name: Exchange GitHub OIDC for a 600-second Scalr credential
+        run: |
+          set -euo pipefail
+          response="$(curl -fsS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=betabitplus")"
+          oidc="$(jq -er '.value' <<<"$response")"
+          echo "::add-mask::$oidc"
+          scalr -quiet assume-service-account \
+            -id-token="$oidc" \
+            -service-account-email="$SCALR_SA_EMAIL" \
+            -lifetime=600
+          test -s "$HOME/.terraform.d/credentials.tfrc.json"
+          jq -e --arg host "$SCALR_HOSTNAME" \
+            '.credentials[$host].token | type == "string" and length > 20' \
+            "$HOME/.terraform.d/credentials.tfrc.json" >/dev/null
+
+      - name: Enforce and read back state-only Scalr workspace
+        run: |
+          set -euo pipefail
+          scalr -quiet update-workspace \
+            -workspace="$SCALR_WORKSPACE_ID" \
+            -execution-mode=local \
+            -operations=false \
+            -remote-backend=true \
+            -iac-platform=opentofu \
+            -terraform-version=1.12.5
+          scalr -format=json get-workspace -workspace="$SCALR_WORKSPACE_ID" > workspace.json
+          jq -e '
+            ."execution-mode" == "local" and
+            .operations == false and
+            ."remote-backend" == true and
+            ."iac-platform" == "opentofu" and
+            ."terraform-version" == "1.12.5" and
+            (."vcs-repo" == null or ."vcs-repo" == {})
+          ' workspace.json >/dev/null
+          scalr -format=json get-runs -filter-workspace="$SCALR_WORKSPACE_ID" > runs.json
+          jq -e 'length == 0' runs.json >/dev/null
+          rm -f workspace.json runs.json
+
+      - name: Verify repository-control PAT scopes and frozen baseline
+        run: |
+          set -euo pipefail
+          curl -fsS -D headers.txt -o /dev/null \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/user
+          scopes="$(awk -F': ' 'tolower($1)=="x-oauth-scopes" {gsub("\r", "", $2); print $2}' headers.txt)"
+          rm -f headers.txt
+          test "$scopes" = "repo, workflow" || {
+            printf 'Unexpected classic PAT scopes: %s\n' "$scopes" >&2
+            exit 1
+          }
+          baseline="$(gh api repos/betabitplus/py-lib-starter/commits/dev --jq '.sha')"
+          test "$baseline" = "$FROZEN_BASELINE_SHA"
+
+      - name: Initialize remote state
+        run: |
+          set -euo pipefail
+          tofu fmt -check -recursive
+          tofu init -input=false -lockfile=readonly
+          tofu validate
+
+      - name: Adopt existing repositories
+        if: ${{ inputs.bootstrap }}
+        run: |
+          set -euo pipefail
+
+          state_has() {
+            tofu state list | grep -Fx -- "$1" >/dev/null 2>&1
+          }
+
+          import_if_missing() {
+            address="$1"
+            id="$2"
+            if ! state_has "$address"; then
+              tofu import -input=false "$address" "$id"
+            fi
+          }
+
+          existing=(
+            ternforge-infra-ci
+            ternforge-infra-repository-control
+            ternforge-template-components
+            ternforge-template-infra-repository
+            ternforge-template-py-library
+            ternforge-tooling-py-policy
+            ternforge-tooling-py-runtime
+            ternforge-tooling-py-testkit
+          )
+          release=(
+            ternforge-infra-ci
+            ternforge-template-components
+            ternforge-template-infra-repository
+            ternforge-template-py-library
+            ternforge-tooling-py-policy
+            ternforge-tooling-py-runtime
+            ternforge-tooling-py-testkit
+          )
+
+          for repo in "${existing[@]}"; do
+            key="betabitplus/${repo}"
+            import_if_missing "github_repository.managed[\"${key}\"]" "$repo"
+            import_if_missing "github_branch_default.main[\"${key}\"]" "$repo"
+            import_if_missing "github_workflow_repository_permissions.managed[\"${key}\"]" "$repo"
+            if [ "$repo" != "ternforge-infra-repository-control" ]; then
+              import_if_missing "github_repository_vulnerability_alerts.managed[\"${key}\"]" "$repo"
+
+              main_id="$(gh api "repos/betabitplus/${repo}/rulesets" \
+                --jq '.[] | select(.name == "main" and .target == "branch") | .id')"
+              tag_id="$(gh api "repos/betabitplus/${repo}/rulesets" \
+                --jq '.[] | select(.name == "release-tags" and .target == "tag") | .id')"
+              test -n "$main_id"
+              test -n "$tag_id"
+              import_if_missing "github_repository_ruleset.main[\"${key}\"]" "${repo}:${main_id}"
+              import_if_missing "github_repository_ruleset.release_tags[\"${key}\"]" "${repo}:${tag_id}"
+            fi
+          done
+
+          for repo in "${release[@]}"; do
+            key="betabitplus/${repo}"
+            import_if_missing "github_actions_variable.release_client_id[\"${key}\"]" \
+              "${repo}:TERNFORGE_RELEASE_CLIENT_ID"
+            import_if_missing "github_app_installation_repository.release[\"${key}\"]" \
+              "151536616:${repo}"
+          done
+
+      - name: Create infra-updates repository declaratively
+        if: ${{ inputs.bootstrap }}
+        run: |
+          set -euo pipefail
+          address='github_repository.managed["betabitplus/ternforge-infra-updates"]'
+          if ! tofu state list | grep -Fx -- "$address" >/dev/null 2>&1; then
+            tofu apply -auto-approve -input=false -target="$address"
+          fi
+
+      - name: Bootstrap infra-updates main from released template
+        if: ${{ inputs.bootstrap }}
+        run: |
+          set -euo pipefail
+          if ! gh api repos/betabitplus/ternforge-infra-updates/branches/main >/dev/null 2>&1; then
+            python3 -m pip install --disable-pip-version-check 'copier==9.17.0'
+            copier --version | grep -Fx 'copier 9.17.0'
+            render="$(mktemp -d)"
+            copier copy \
+              https://github.com/betabitplus/ternforge-template-infra-repository.git \
+              "$render" \
+              --vcs-ref v1.1.0 \
+              --defaults \
+              --data repository_name=ternforge-infra-updates \
+              --data repository_description='Full-fleet update delivery for Ternforge repositories.'
+            mkdir -p "$render/.github/workflows"
+            cp bootstrap/infra-updates-ci.yml "$render/.github/workflows/ci.yml"
+            git -C "$render" init -b main
+            git -C "$render" config user.name github-actions[bot]
+            git -C "$render" config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git -C "$render" add .
+            git -C "$render" commit -m 'chore: bootstrap ternforge-infra-updates'
+            git -C "$render" remote add origin https://github.com/betabitplus/ternforge-infra-updates.git
+            gh auth setup-git
+            git -C "$render" push origin main
+            rm -rf "$render"
+          fi
+
+      - name: Review and apply repository-control plan
+        run: |
+          set -euo pipefail
+          tofu plan -input=false -out=task0005.plan
+          tofu show -json task0005.plan > task0005-plan.json
+          jq -e '[.resource_changes[]? | select(.change.actions | index("delete"))] | length == 0' \
+            task0005-plan.json >/dev/null
+          tofu apply -input=false task0005.plan
+          rm -f task0005.plan task0005-plan.json
+
+      - name: Prove no drift and frozen baseline integrity
+        run: |
+          set -euo pipefail
+          set +e
+          tofu plan -detailed-exitcode -input=false > no-drift.txt
+          code=$?
+          set -e
+          cat no-drift.txt
+          rm -f no-drift.txt
+          test "$code" -eq 0
+          baseline="$(gh api repos/betabitplus/py-lib-starter/commits/dev --jq '.sha')"
+          test "$baseline" = "$FROZEN_BASELINE_SHA"
+          scalr -format=json get-runs -filter-workspace="$SCALR_WORKSPACE_ID" > runs.json
+          jq -e 'length == 0' runs.json >/dev/null
+          rm -f runs.json

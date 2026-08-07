@@ -1,0 +1,5 @@
+# This file is managed by Copier.
+_commit: v1.1.0
+_src_path: https://github.com/betabitplus/ternforge-template-infra-repository.git
+repository_description: Declarative GitHub repository control for the Ternforge fleet.
+repository_name: ternforge-infra-repository-control

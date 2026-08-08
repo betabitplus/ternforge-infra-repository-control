@@ -38,7 +38,6 @@ variable "repositories" {
     has_projects     = bool
     has_wiki         = bool
     versioned        = bool
-    release_app      = bool
     release_tag_refs = list(string)
     topics           = list(string)
   }))

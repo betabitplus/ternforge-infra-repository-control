@@ -8,16 +8,6 @@ variable "release_client_id" {
   type        = string
 }
 
-variable "dispatch_app_installation_id" {
-  description = "Selected-repository installation ID for the permanent ternforge-dispatch GitHub App."
-  type        = number
-}
-
-variable "dispatch_client_id" {
-  description = "Public client ID of the permanent ternforge-dispatch GitHub App."
-  type        = string
-}
-
 variable "renovate_app_installation_id" {
   description = "Selected-repository installation ID for the permanent ternforge-renovate GitHub App."
   type        = number

@@ -14,10 +14,6 @@ locals {
     if settings.versioned
   }
 
-  release_repositories = {
-    for repository, settings in local.repositories : repository => settings
-    if settings.release_app
-  }
 }
 
 import {
@@ -86,7 +82,7 @@ resource "github_repository_vulnerability_alerts" "managed" {
 }
 
 resource "github_actions_variable" "release_client_id" {
-  for_each = local.release_repositories
+  for_each = local.versioned_repositories
 
   repository    = github_repository.managed[each.key].name
   variable_name = "TERNFORGE_RELEASE_CLIENT_ID"
@@ -110,7 +106,7 @@ resource "github_actions_variable" "renovate_client_id" {
 resource "github_app_installation_repositories" "release" {
   installation_id = var.release_app_installation_id
   selected_repositories = sort([
-    for repository in keys(local.release_repositories) : github_repository.managed[repository].name
+    for repository in keys(local.versioned_repositories) : github_repository.managed[repository].name
   ])
 }
 

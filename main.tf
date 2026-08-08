@@ -93,10 +93,36 @@ resource "github_actions_variable" "release_client_id" {
   value         = var.release_client_id
 }
 
+resource "github_actions_variable" "dispatch_client_id" {
+  for_each = local.versioned_repositories
+
+  repository    = github_repository.managed[each.key].name
+  variable_name = "TERNFORGE_DISPATCH_CLIENT_ID"
+  value         = var.dispatch_client_id
+}
+
+resource "github_actions_variable" "renovate_client_id" {
+  repository    = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  variable_name = "TERNFORGE_RENOVATE_CLIENT_ID"
+  value         = var.renovate_client_id
+}
+
 resource "github_app_installation_repositories" "release" {
   installation_id = var.release_app_installation_id
   selected_repositories = sort([
     for repository in keys(local.release_repositories) : github_repository.managed[repository].name
+  ])
+}
+
+resource "github_app_installation_repositories" "dispatch" {
+  installation_id       = var.dispatch_app_installation_id
+  selected_repositories = [github_repository.managed["betabitplus/ternforge-infra-updates"].name]
+}
+
+resource "github_app_installation_repositories" "renovate" {
+  installation_id = var.renovate_app_installation_id
+  selected_repositories = sort([
+    for repository in keys(local.repositories) : github_repository.managed[repository].name
   ])
 }
 

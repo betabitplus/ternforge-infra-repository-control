@@ -23,6 +23,13 @@ import {
   id = each.value.name
 }
 
+import {
+  for_each = local.versioned_repositories
+
+  to = github_actions_variable.release_client_id[each.key]
+  id = "${each.value.name}:TERNFORGE_RELEASE_CLIENT_ID"
+}
+
 resource "github_repository" "managed" {
   for_each = local.repositories
 

@@ -31,7 +31,7 @@ A repository gets its files before it enters the fleet:
 
    A non-versioned repository skips this step.
 4. Push the prepared initial `main` and verify `.copier-answers.yml`, `main`, `ci / required`, and a successful initial release workflow when versioned.
-5. Add one sorted inventory entry by PR. The permanent OpenTofu `import` block adopts the repository on the reviewed apply and converges App membership.
+5. Add one sorted inventory entry by PR. Permanent OpenTofu `import` blocks adopt the repository and, for versioned repositories, the pre-provisioned `TERNFORGE_RELEASE_CLIENT_ID` variable on the reviewed apply; the same apply converges App membership.
 
 Do not add bootstrap flags, `github_repository_file`, an onboarding CLI, or a synthetic bootstrap PR.
 

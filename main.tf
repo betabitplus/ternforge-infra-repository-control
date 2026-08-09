@@ -66,7 +66,7 @@ resource "github_repository" "managed" {
   }
 
   lifecycle {
-    prevent_destroy = true
+    destroy = false
   }
 }
 

@@ -44,13 +44,17 @@ resource "github_repository" "managed" {
 
   topics = each.value.topics
 
-  security_and_analysis {
-    secret_scanning {
-      status = "enabled"
-    }
+  dynamic "security_and_analysis" {
+    for_each = each.value.visibility == "public" ? [true] : []
 
-    secret_scanning_push_protection {
-      status = "enabled"
+    content {
+      secret_scanning {
+        status = "enabled"
+      }
+
+      secret_scanning_push_protection {
+        status = "enabled"
+      }
     }
   }
 

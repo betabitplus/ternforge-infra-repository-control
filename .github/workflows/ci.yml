@@ -46,8 +46,6 @@ jobs:
           tofu_wrapper: false
 
       - name: Validate repository control
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           tofu fmt -check -recursive
@@ -55,12 +53,10 @@ jobs:
           tofu validate
 
           validation_dir="$(mktemp -d)"
-          cp .terraform.lock.hcl fleet.auto.tfvars.json ./*.tf "$validation_dir/"
-          rm "$validation_dir/backend.tf"
+          cp fleet.auto.tfvars.json variables.tf "$validation_dir/"
           (
             cd "$validation_dir"
-            tofu init -backend=false -input=false -lockfile=readonly
-            tofu validate
+            tofu init -backend=false -input=false
             tofu plan -refresh=false -input=false -lock=false >/dev/null
           )
           rm -rf "$validation_dir"

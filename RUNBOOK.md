@@ -14,19 +14,24 @@ tofu validate
 
 A repository gets its files before it enters the fleet:
 
-1. Render the exact released Copier template with all required answers.
-2. Add the role-owned CI/release files required by that repository; initial `main` must expose `ci / required`.
-3. Commit the initial `main` and create the repository with explicit visibility:
+1. Render the exact released Copier template with all required answers and add the role-owned CI/release files; initial `main` must expose `ci / required`.
+2. Create the empty repository shell with explicit visibility:
 
    ```sh
    repo="ternforge-example"
-   repo_dir="/path/to/rendered/repository"
-   gh repo create "betabitplus/$repo" --public --source "$repo_dir" --remote origin --push
+   gh repo create "betabitplus/$repo" --public
    ```
 
    Use `--private` instead for a private repository.
-4. Verify `.copier-answers.yml`, `main`, and `ci / required`.
-5. Add one sorted inventory entry by PR. The permanent OpenTofu `import` block adopts the repository on the reviewed apply.
+3. For a versioned repository, before the first `main` push:
+   * create the `release` environment with custom branch policy exactly `main`;
+   * set `TERNFORGE_RELEASE_CLIENT_ID` from the authoritative repository-control input;
+   * restore the current Release App key only from its canonical SOPS/Age escrow, set `TERNFORGE_RELEASE_PRIVATE_KEY` in that environment, and immediately delete the plaintext restoration;
+   * add the repository to the existing selected-repository Release App installation. This membership is pre-enrollment bootstrap state only; OpenTofu becomes authoritative after enrollment.
+
+   A non-versioned repository skips this step.
+4. Push the prepared initial `main` and verify `.copier-answers.yml`, `main`, `ci / required`, and a successful initial release workflow when versioned.
+5. Add one sorted inventory entry by PR. The permanent OpenTofu `import` block adopts the repository on the reviewed apply and converges App membership.
 
 Do not add bootstrap flags, `github_repository_file`, an onboarding CLI, or a synthetic bootstrap PR.
 

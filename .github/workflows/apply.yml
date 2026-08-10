@@ -25,13 +25,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: repository-control-apply
-    env:
-      GITHUB_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
-      GH_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
     outputs:
       plan_digest: ${{ steps.plan.outputs.digest }}
     steps:
       - name: Verify repository-control environment protections
+        env:
+          GH_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
         run: |
           set -euo pipefail
           environment_json="$(gh api "repos/${GITHUB_REPOSITORY}/environments/repository-control-apply")"
@@ -119,6 +118,9 @@ jobs:
           rm -f workspace.json runs.json variables.json provider-links.json
 
       - name: Verify repository-control PAT scopes and frozen baseline
+        env:
+          GITHUB_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
         run: |
           set -euo pipefail
           curl -fsS -D headers.txt -o /dev/null \
@@ -145,6 +147,8 @@ jobs:
 
       - name: Build reviewed repository-control plan
         id: plan
+        env:
+          GITHUB_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
         run: |
           set -euo pipefail
           tofu plan -input=false -out=repository-control.plan
@@ -171,11 +175,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: repository-control-apply
-    env:
-      GITHUB_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
-      GH_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
     steps:
       - name: Verify repository-control environment protections
+        env:
+          GH_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
         run: |
           set -euo pipefail
           environment_json="$(gh api "repos/${GITHUB_REPOSITORY}/environments/repository-control-apply")"
@@ -263,6 +266,9 @@ jobs:
           rm -f workspace.json runs.json variables.json provider-links.json
 
       - name: Verify repository-control PAT scopes and frozen baseline
+        env:
+          GITHUB_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
         run: |
           set -euo pipefail
           curl -fsS -D headers.txt -o /dev/null \
@@ -289,6 +295,7 @@ jobs:
 
       - name: Re-plan, verify reviewed digest, and apply
         env:
+          GITHUB_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
           REVIEWED_PLAN_DIGEST: ${{ needs.plan.outputs.plan_digest }}
         run: |
           set -euo pipefail
@@ -305,6 +312,9 @@ jobs:
           rm -f repository-control.plan repository-control-plan.json
 
       - name: Prove no drift and frozen baseline integrity
+        env:
+          GITHUB_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
         run: |
           set -euo pipefail
           set +e

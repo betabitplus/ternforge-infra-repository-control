@@ -31,6 +31,33 @@ jobs:
     outputs:
       plan_digest: ${{ steps.plan.outputs.digest }}
     steps:
+      - name: Verify repository-control environment protections
+        run: |
+          set -euo pipefail
+          environment_json="$(gh api "repos/${GITHUB_REPOSITORY}/environments/repository-control-apply")"
+          jq -e --arg owner "$GITHUB_REPOSITORY_OWNER" '
+            .can_admins_bypass == false and
+            .deployment_branch_policy == {
+              "protected_branches": false,
+              "custom_branch_policies": true
+            } and
+            ([.protection_rules[] | select(.type == "required_reviewers")] | length) == 1 and
+            ([
+              .protection_rules[] |
+              select(.type == "required_reviewers") |
+              .reviewers[] |
+              {type, login: .reviewer.login}
+            ] == [{"type": "User", "login": $owner}])
+          ' <<<"$environment_json" >/dev/null
+
+          branch_policies_json="$(gh api "repos/${GITHUB_REPOSITORY}/environments/repository-control-apply/deployment-branch-policies")"
+          jq -e '
+            .total_count == 1 and
+            (.branch_policies | length) == 1 and
+            .branch_policies[0].name == "main" and
+            .branch_policies[0].type == "branch"
+          ' <<<"$branch_policies_json" >/dev/null
+
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -148,6 +175,33 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
       GH_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
     steps:
+      - name: Verify repository-control environment protections
+        run: |
+          set -euo pipefail
+          environment_json="$(gh api "repos/${GITHUB_REPOSITORY}/environments/repository-control-apply")"
+          jq -e --arg owner "$GITHUB_REPOSITORY_OWNER" '
+            .can_admins_bypass == false and
+            .deployment_branch_policy == {
+              "protected_branches": false,
+              "custom_branch_policies": true
+            } and
+            ([.protection_rules[] | select(.type == "required_reviewers")] | length) == 1 and
+            ([
+              .protection_rules[] |
+              select(.type == "required_reviewers") |
+              .reviewers[] |
+              {type, login: .reviewer.login}
+            ] == [{"type": "User", "login": $owner}])
+          ' <<<"$environment_json" >/dev/null
+
+          branch_policies_json="$(gh api "repos/${GITHUB_REPOSITORY}/environments/repository-control-apply/deployment-branch-policies")"
+          jq -e '
+            .total_count == 1 and
+            (.branch_policies | length) == 1 and
+            .branch_policies[0].name == "main" and
+            .branch_policies[0].type == "branch"
+          ' <<<"$branch_policies_json" >/dev/null
+
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

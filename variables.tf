@@ -45,9 +45,9 @@ variable "repositories" {
   validation {
     condition = alltrue([
       for repository in var.repositories :
-      can(regex("^betabitplus/ternforge-[a-z0-9-]+$", repository.repository))
+      can(regex("^betabitplus/[a-z0-9][a-z0-9._-]*$", repository.repository))
     ])
-    error_message = "Managed repositories must use normalized betabitplus/ternforge-* full names."
+    error_message = "Managed repositories must use normalized betabitplus/<repository> full names."
   }
 
   validation {

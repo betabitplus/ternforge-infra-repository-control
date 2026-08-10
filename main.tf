@@ -41,7 +41,7 @@ resource "github_repository" "managed" {
   has_projects = each.value.has_projects
   has_wiki     = each.value.has_wiki
 
-  allow_auto_merge            = true
+  allow_auto_merge            = false
   delete_branch_on_merge      = true
   allow_squash_merge          = true
   allow_merge_commit          = false

@@ -161,6 +161,34 @@ resource "github_repository_ruleset" "main" {
   depends_on = [github_branch_default.main]
 }
 
+resource "github_repository_ruleset" "main_updates" {
+  for_each = local.repositories
+
+  name        = "main-updates"
+  repository  = github_repository.managed[each.key].name
+  target      = "branch"
+  enforcement = "active"
+
+  bypass_actors {
+    actor_id    = 5
+    actor_type  = "RepositoryRole"
+    bypass_mode = "pull_request"
+  }
+
+  conditions {
+    ref_name {
+      include = ["refs/heads/main"]
+      exclude = []
+    }
+  }
+
+  rules {
+    update = true
+  }
+
+  depends_on = [github_branch_default.main]
+}
+
 resource "github_repository_ruleset" "release_tags" {
   for_each = local.versioned_repositories
 

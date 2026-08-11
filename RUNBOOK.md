@@ -24,14 +24,14 @@ A repository gets its files before it enters the fleet:
 
    Use `--private` instead for a private repository.
 3. For a versioned repository, before the first `main` push:
-   * create the `release` environment with custom branch policy exactly `main`;
+   * create the `release` environment with custom branch policies enabled but no branch pattern yet, so deployment stays fail-closed until enrollment;
    * set `TERNFORGE_RELEASE_CLIENT_ID` from the authoritative repository-control input;
    * restore the current Release App key only from its canonical SOPS/Age escrow, set `TERNFORGE_RELEASE_PRIVATE_KEY` in that environment, and immediately delete the plaintext restoration;
    * add the repository to the existing selected-repository Release App installation. This membership is pre-enrollment bootstrap state only; OpenTofu becomes authoritative after enrollment.
 
    A non-versioned repository skips this step.
-4. Push the prepared initial `main` and verify `.copier-answers.yml`, `main`, `ci / required`, and a successful initial release workflow when versioned.
-5. Add one sorted inventory entry by PR. Permanent OpenTofu `import` blocks adopt the repository and, for versioned repositories, the pre-provisioned `TERNFORGE_RELEASE_CLIENT_ID` variable on the reviewed apply; the same apply converges App membership.
+4. Push the prepared initial `main` and verify `.copier-answers.yml`, `main`, and `ci / required`; a versioned repository cannot consume the release environment yet because no branch policy is enrolled.
+5. Add one sorted inventory entry by PR. Permanent OpenTofu `import` blocks adopt the repository and, for versioned repositories, the pre-provisioned `release` environment and `TERNFORGE_RELEASE_CLIENT_ID` variable; the same reviewed apply creates the sole `main` deployment policy and converges App membership. Then run or rerun the normal release workflow successfully.
 
 Do not add bootstrap flags, `github_repository_file`, an onboarding CLI, or a synthetic bootstrap PR.
 

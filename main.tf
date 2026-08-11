@@ -17,17 +17,6 @@ locals {
     for repository, settings in local.repositories : repository => settings
     if settings.versioned
   }
-
-  existing_release_environment_policy_ids = {
-    "betabitplus/ternforge-infra-ci"                  = 56871109
-    "betabitplus/ternforge-infra-updates"             = 56871113
-    "betabitplus/ternforge-template-components"       = 56871114
-    "betabitplus/ternforge-template-infra-repository" = 56871120
-    "betabitplus/ternforge-template-py-library"       = 56871121
-    "betabitplus/ternforge-tooling-py-policy"         = 56871123
-    "betabitplus/ternforge-tooling-py-runtime"        = 56871122
-    "betabitplus/ternforge-tooling-py-testkit"        = 56871124
-  }
 }
 
 import {
@@ -49,43 +38,6 @@ import {
 
   to = github_repository_environment.release[each.key]
   id = "${each.value.name}:release"
-}
-
-import {
-  to = github_repository_environment.repository_control_apply
-  id = "ternforge-infra-repository-control:repository-control-apply"
-}
-
-import {
-  to = github_repository_environment.renovate
-  id = "ternforge-infra-updates:renovate"
-}
-
-import {
-  to = github_repository_environment.grafana
-  id = "ternforge-infra-updates:grafana"
-}
-
-import {
-  for_each = local.existing_release_environment_policy_ids
-
-  to = github_repository_environment_deployment_policy.release[each.key]
-  id = "${split("/", each.key)[1]}:release:${each.value}"
-}
-
-import {
-  to = github_repository_environment_deployment_policy.repository_control_apply
-  id = "ternforge-infra-repository-control:repository-control-apply:56763942"
-}
-
-import {
-  to = github_repository_environment_deployment_policy.renovate
-  id = "ternforge-infra-updates:renovate:56871127"
-}
-
-import {
-  to = github_repository_environment_deployment_policy.grafana
-  id = "ternforge-infra-updates:grafana:56889411"
 }
 
 resource "github_repository" "managed" {

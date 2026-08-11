@@ -50,10 +50,9 @@ variable "repositories" {
   validation {
     condition = alltrue([
       for repository in var.repositories :
-      can(regex("^betabitplus/[a-z0-9][a-z0-9-]*$", repository.repository)) &&
-      repository.repository != "betabitplus/py-lib-starter"
+      can(regex("^betabitplus/[a-z0-9][a-z0-9-]*$", repository.repository))
     ])
-    error_message = "Managed repositories must be normalized betabitplus repositories and must not target the frozen py-lib-starter baseline."
+    error_message = "Managed repositories must be normalized betabitplus repositories."
   }
 
   validation {

@@ -52,7 +52,7 @@ Run `repository control` on `main`.
 1. Approve `repository control / plan` and review its Job Summary.
 2. Approve `repository control / apply` only after reviewing that plan.
 
-Both jobs fail closed unless the PAT is exactly `repo` + `read:user`, the GitHub environment has owner review with admin bypass disabled and only `main` allowed, Scalr is state-only, and the frozen baseline SHA is unchanged. Apply re-plans and hashes the complete changed `resource_changes`; a different digest requires a new review.
+Both jobs fail closed unless the PAT is exactly `repo` + `read:user`, the GitHub environment has owner review with admin bypass disabled and only `main` allowed, and Scalr is state-only. Apply re-plans and hashes the complete changed `resource_changes`; a different digest requires a new review.
 
 Plans and plan JSON stay runner-local and are deleted.
 

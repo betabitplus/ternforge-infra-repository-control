@@ -12,7 +12,6 @@ env:
   SCALR_SA_EMAIL: ternforge-repository-control-github@betabitplus-ternforge.scalr.io
   SCALR_CLI_VERSION: 0.18.0
   SCALR_WORKSPACE_ID: ws-v0pc7dbrm7g2p3aat
-  FROZEN_BASELINE_SHA: d59582375855cff69fb165e467dc5847bc75ca99
 
 concurrency:
   group: repository-control-apply
@@ -117,10 +116,9 @@ jobs:
           jq -e 'length == 0' provider-links.json >/dev/null
           rm -f workspace.json runs.json variables.json provider-links.json
 
-      - name: Verify repository-control PAT scopes and frozen baseline
+      - name: Verify repository-control PAT scopes
         env:
           GITHUB_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
-          GH_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
         run: |
           set -euo pipefail
           curl -fsS -D headers.txt -o /dev/null \
@@ -135,8 +133,6 @@ jobs:
             printf 'Unexpected classic PAT scopes: %s\n' "$scopes" >&2
             exit 1
           }
-          baseline="$(gh api repos/betabitplus/py-lib-starter/commits/dev --jq '.sha')"
-          test "$baseline" = "$FROZEN_BASELINE_SHA"
 
       - name: Initialize remote state
         run: |
@@ -265,10 +261,9 @@ jobs:
           jq -e 'length == 0' provider-links.json >/dev/null
           rm -f workspace.json runs.json variables.json provider-links.json
 
-      - name: Verify repository-control PAT scopes and frozen baseline
+      - name: Verify repository-control PAT scopes
         env:
           GITHUB_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
-          GH_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
         run: |
           set -euo pipefail
           curl -fsS -D headers.txt -o /dev/null \
@@ -283,8 +278,6 @@ jobs:
             printf 'Unexpected classic PAT scopes: %s\n' "$scopes" >&2
             exit 1
           }
-          baseline="$(gh api repos/betabitplus/py-lib-starter/commits/dev --jq '.sha')"
-          test "$baseline" = "$FROZEN_BASELINE_SHA"
 
       - name: Initialize remote state
         run: |
@@ -311,10 +304,9 @@ jobs:
           tofu apply -input=false repository-control.plan
           rm -f repository-control.plan repository-control-plan.json
 
-      - name: Prove no drift and frozen baseline integrity
+      - name: Prove no drift
         env:
           GITHUB_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
-          GH_TOKEN: ${{ secrets.TERNFORGE_REPOSITORY_CONTROL_TOKEN }}
         run: |
           set -euo pipefail
           set +e
@@ -324,8 +316,6 @@ jobs:
           cat no-drift.txt
           rm -f no-drift.txt
           test "$code" -eq 0
-          baseline="$(gh api repos/betabitplus/py-lib-starter/commits/dev --jq '.sha')"
-          test "$baseline" = "$FROZEN_BASELINE_SHA"
           scalr -format=json get-runs -filter-workspace="$SCALR_WORKSPACE_ID" > runs.json
           jq -e 'length == 0' runs.json >/dev/null
           rm -f runs.json

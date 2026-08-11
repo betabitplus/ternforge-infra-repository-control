@@ -2,6 +2,10 @@ data "github_app" "actions" {
   slug = "github-actions"
 }
 
+data "github_user" "owner" {
+  username = "betabitplus"
+}
+
 locals {
   repositories = {
     for repository in var.repositories : repository.repository => merge(repository, {
@@ -14,6 +18,16 @@ locals {
     if settings.versioned
   }
 
+  existing_release_environment_policy_ids = {
+    "betabitplus/ternforge-infra-ci"                  = 56871109
+    "betabitplus/ternforge-infra-updates"             = 56871113
+    "betabitplus/ternforge-template-components"       = 56871114
+    "betabitplus/ternforge-template-infra-repository" = 56871120
+    "betabitplus/ternforge-template-py-library"       = 56871121
+    "betabitplus/ternforge-tooling-py-policy"         = 56871123
+    "betabitplus/ternforge-tooling-py-runtime"        = 56871122
+    "betabitplus/ternforge-tooling-py-testkit"        = 56871124
+  }
 }
 
 import {
@@ -28,6 +42,50 @@ import {
 
   to = github_actions_variable.release_client_id[each.key]
   id = "${each.value.name}:TERNFORGE_RELEASE_CLIENT_ID"
+}
+
+import {
+  for_each = local.versioned_repositories
+
+  to = github_repository_environment.release[each.key]
+  id = "${each.value.name}:release"
+}
+
+import {
+  to = github_repository_environment.repository_control_apply
+  id = "ternforge-infra-repository-control:repository-control-apply"
+}
+
+import {
+  to = github_repository_environment.renovate
+  id = "ternforge-infra-updates:renovate"
+}
+
+import {
+  to = github_repository_environment.grafana
+  id = "ternforge-infra-updates:grafana"
+}
+
+import {
+  for_each = local.existing_release_environment_policy_ids
+
+  to = github_repository_environment_deployment_policy.release[each.key]
+  id = "${split("/", each.key)[1]}:release:${each.value}"
+}
+
+import {
+  to = github_repository_environment_deployment_policy.repository_control_apply
+  id = "ternforge-infra-repository-control:repository-control-apply:56763942"
+}
+
+import {
+  to = github_repository_environment_deployment_policy.renovate
+  id = "ternforge-infra-updates:renovate:56871127"
+}
+
+import {
+  to = github_repository_environment_deployment_policy.grafana
+  id = "ternforge-infra-updates:grafana:56889411"
 }
 
 resource "github_repository" "managed" {
@@ -85,6 +143,88 @@ resource "github_workflow_repository_permissions" "managed" {
   can_approve_pull_request_reviews = false
 }
 
+resource "github_repository_environment" "release" {
+  for_each = local.versioned_repositories
+
+  repository        = github_repository.managed[each.key].name
+  environment       = "release"
+  can_admins_bypass = false
+
+  deployment_branch_policy {
+    protected_branches     = false
+    custom_branch_policies = true
+  }
+}
+
+resource "github_repository_environment" "repository_control_apply" {
+  repository          = github_repository.managed["betabitplus/ternforge-infra-repository-control"].name
+  environment         = "repository-control-apply"
+  can_admins_bypass   = false
+  prevent_self_review = false
+
+  reviewers {
+    users = [data.github_user.owner.id]
+  }
+
+  deployment_branch_policy {
+    protected_branches     = false
+    custom_branch_policies = true
+  }
+}
+
+resource "github_repository_environment" "renovate" {
+  repository        = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  environment       = "renovate"
+  can_admins_bypass = false
+
+  deployment_branch_policy {
+    protected_branches     = false
+    custom_branch_policies = true
+  }
+}
+
+resource "github_repository_environment" "grafana" {
+  repository          = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  environment         = "grafana"
+  can_admins_bypass   = false
+  prevent_self_review = false
+
+  reviewers {
+    users = [data.github_user.owner.id]
+  }
+
+  deployment_branch_policy {
+    protected_branches     = false
+    custom_branch_policies = true
+  }
+}
+
+resource "github_repository_environment_deployment_policy" "release" {
+  for_each = local.versioned_repositories
+
+  repository     = github_repository.managed[each.key].name
+  environment    = github_repository_environment.release[each.key].environment
+  branch_pattern = "main"
+}
+
+resource "github_repository_environment_deployment_policy" "repository_control_apply" {
+  repository     = github_repository.managed["betabitplus/ternforge-infra-repository-control"].name
+  environment    = github_repository_environment.repository_control_apply.environment
+  branch_pattern = "main"
+}
+
+resource "github_repository_environment_deployment_policy" "renovate" {
+  repository     = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  environment    = github_repository_environment.renovate.environment
+  branch_pattern = "main"
+}
+
+resource "github_repository_environment_deployment_policy" "grafana" {
+  repository     = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  environment    = github_repository_environment.grafana.environment
+  branch_pattern = "main"
+}
+
 resource "github_repository_vulnerability_alerts" "managed" {
   for_each = local.repositories
 
@@ -104,6 +244,12 @@ resource "github_actions_variable" "renovate_client_id" {
   repository    = github_repository.managed["betabitplus/ternforge-infra-updates"].name
   variable_name = "TERNFORGE_RENOVATE_CLIENT_ID"
   value         = var.renovate_client_id
+}
+
+resource "github_actions_variable" "grafana_installation_id" {
+  repository    = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  variable_name = "TERNFORGE_GRAFANA_GITHUB_INSTALLATION_ID"
+  value         = tostring(var.grafana_app_installation_id)
 }
 
 resource "github_app_installation_repositories" "grafana" {

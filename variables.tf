@@ -1,3 +1,8 @@
+variable "grafana_app_installation_id" {
+  description = "Selected-repository installation ID for the permanent ternforge-fleet-health GitHub App."
+  type        = number
+}
+
 variable "release_app_installation_id" {
   description = "Selected-repository installation ID for the permanent ternforge-release GitHub App."
   type        = number

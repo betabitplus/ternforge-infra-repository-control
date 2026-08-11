@@ -106,6 +106,13 @@ resource "github_actions_variable" "renovate_client_id" {
   value         = var.renovate_client_id
 }
 
+resource "github_app_installation_repositories" "grafana" {
+  installation_id = var.grafana_app_installation_id
+  selected_repositories = sort([
+    for repository in keys(local.repositories) : github_repository.managed[repository].name
+  ])
+}
+
 resource "github_app_installation_repositories" "release" {
   installation_id = var.release_app_installation_id
   selected_repositories = sort([

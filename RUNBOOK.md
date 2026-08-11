@@ -40,7 +40,7 @@ Do not add bootstrap flags, `github_repository_file`, an onboarding CLI, or a sy
 1. Remove the repository's single inventory entry by PR.
 2. In the protected plan, verify the `github_repository` object is **forgotten**, not destroyed; only its managed controls are destroyed and App memberships shrink.
 3. Apply the reviewed plan and require the built-in post-apply no-drift check to pass.
-4. Read back Release/Renovate App membership, then delete the repository separately with GitHub.
+4. Read back Release/Renovate/Grafana App membership, then delete the repository separately with GitHub.
 5. Run one final protected no-drift workflow against the remaining fleet.
 
 Repository deletion is intentionally outside OpenTofu; `lifecycle.destroy = false` prevents de-enrollment from deleting the GitHub repository.

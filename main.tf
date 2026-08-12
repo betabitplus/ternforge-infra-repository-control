@@ -204,6 +204,30 @@ resource "github_actions_variable" "grafana_installation_id" {
   value         = tostring(var.grafana_app_installation_id)
 }
 
+resource "github_actions_variable" "grafana_app_id" {
+  repository    = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  variable_name = "TERNFORGE_GRAFANA_GITHUB_APP_ID"
+  value         = tostring(var.grafana_app_id)
+}
+
+resource "github_actions_variable" "grafana_stack_slug" {
+  repository    = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  variable_name = "TERNFORGE_GRAFANA_STACK_SLUG"
+  value         = var.grafana_stack_slug
+}
+
+resource "github_actions_variable" "grafana_otlp_endpoint" {
+  repository    = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  variable_name = "TERNFORGE_GRAFANA_OTLP_ENDPOINT"
+  value         = var.grafana_otlp_endpoint
+}
+
+resource "github_actions_variable" "grafana_otlp_username" {
+  repository    = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  variable_name = "TERNFORGE_GRAFANA_OTLP_USERNAME"
+  value         = var.grafana_otlp_username
+}
+
 resource "github_app_installation_repositories" "grafana" {
   installation_id = var.grafana_app_installation_id
   selected_repositories = sort([

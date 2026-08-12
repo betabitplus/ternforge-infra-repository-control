@@ -1,6 +1,26 @@
+variable "grafana_app_id" {
+  description = "Public App ID for the permanent ternforge-fleet-health GitHub App."
+  type        = number
+}
+
 variable "grafana_app_installation_id" {
   description = "Selected-repository installation ID for the permanent ternforge-fleet-health GitHub App."
   type        = number
+}
+
+variable "grafana_otlp_endpoint" {
+  description = "Public Grafana Cloud OTLP endpoint used by Fleet Health telemetry."
+  type        = string
+}
+
+variable "grafana_otlp_username" {
+  description = "Public Grafana Cloud OTLP username used by Fleet Health telemetry."
+  type        = string
+}
+
+variable "grafana_stack_slug" {
+  description = "Grafana Cloud stack slug used by Fleet Health management."
+  type        = string
 }
 
 variable "release_app_installation_id" {

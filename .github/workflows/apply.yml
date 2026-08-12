@@ -21,7 +21,7 @@ jobs:
   plan:
     name: repository control / plan
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: repository-control-apply
     outputs:
@@ -168,7 +168,7 @@ jobs:
     name: repository control / apply
     if: github.ref == 'refs/heads/main'
     needs: plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: repository-control-apply
     steps:

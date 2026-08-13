@@ -48,6 +48,16 @@ variable "renovate_client_id" {
   type        = string
 }
 
+variable "source_read_app_installation_id" {
+  description = "Selected-repository installation ID for the permanent ternforge-source-read GitHub App."
+  type        = number
+}
+
+variable "source_read_client_id" {
+  description = "Public client ID of the permanent ternforge-source-read GitHub App."
+  type        = string
+}
+
 variable "repositories" {
   description = "Single authoritative Ternforge fleet inventory and repository-control configuration."
 

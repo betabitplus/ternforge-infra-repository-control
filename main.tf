@@ -198,6 +198,14 @@ resource "github_actions_variable" "renovate_client_id" {
   value         = var.renovate_client_id
 }
 
+resource "github_actions_variable" "source_read_client_id" {
+  for_each = local.repositories
+
+  repository    = github_repository.managed[each.key].name
+  variable_name = "TERNFORGE_SOURCE_READ_CLIENT_ID"
+  value         = var.source_read_client_id
+}
+
 resource "github_actions_variable" "grafana_installation_id" {
   repository    = github_repository.managed["betabitplus/ternforge-infra-updates"].name
   variable_name = "TERNFORGE_GRAFANA_GITHUB_INSTALLATION_ID"
@@ -244,6 +252,13 @@ resource "github_app_installation_repositories" "release" {
 
 resource "github_app_installation_repositories" "renovate" {
   installation_id = var.renovate_app_installation_id
+  selected_repositories = sort([
+    for repository in keys(local.repositories) : github_repository.managed[repository].name
+  ])
+}
+
+resource "github_app_installation_repositories" "source_read" {
+  installation_id = var.source_read_app_installation_id
   selected_repositories = sort([
     for repository in keys(local.repositories) : github_repository.managed[repository].name
   ])

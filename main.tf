@@ -318,6 +318,34 @@ resource "github_repository_ruleset" "main_updates" {
   depends_on = [github_branch_default.main]
 }
 
+resource "github_repository_ruleset" "release_tag_creation" {
+  for_each = local.versioned_repositories
+
+  name        = "release-tag-creation"
+  repository  = github_repository.managed[each.key].name
+  target      = "tag"
+  enforcement = "active"
+
+  bypass_actors {
+    actor_id    = var.release_app_id
+    actor_type  = "Integration"
+    bypass_mode = "always"
+  }
+
+  conditions {
+    ref_name {
+      include = ["refs/tags/v*"]
+      exclude = []
+    }
+  }
+
+  rules {
+    creation = true
+  }
+
+  depends_on = [github_branch_default.main]
+}
+
 resource "github_repository_ruleset" "release_tags" {
   for_each = local.versioned_repositories
 

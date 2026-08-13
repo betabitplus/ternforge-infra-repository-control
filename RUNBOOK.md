@@ -31,7 +31,7 @@ A repository gets its files before it enters the fleet:
 
    A non-versioned repository skips this step.
 4. Push the prepared initial `main` and verify `.copier-answers.yml`, `main`, and `ci / required`; a versioned repository cannot consume the release environment yet because no branch policy is enrolled.
-5. Add one sorted inventory entry by PR. Permanent OpenTofu `import` blocks adopt the repository and, for versioned repositories, the pre-provisioned `release` environment and `TERNFORGE_RELEASE_CLIENT_ID` variable; the same reviewed apply creates the sole `main` deployment policy and converges App membership. Then run or rerun the normal release workflow successfully.
+5. Add one sorted inventory entry by PR. Permanent OpenTofu `import` blocks adopt the repository and, for versioned repositories, the pre-provisioned `release` environment and `TERNFORGE_RELEASE_CLIENT_ID` variable; the same reviewed apply creates the sole `main` deployment policy, converges App membership, and restricts new `v*` tag creation to the Release App while keeping existing `v*` tags immutable for everyone. Then run or rerun the normal release workflow successfully.
 
 Do not add bootstrap flags, `github_repository_file`, an onboarding CLI, or a synthetic bootstrap PR.
 

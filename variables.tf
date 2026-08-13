@@ -47,14 +47,13 @@ variable "repositories" {
   description = "Single authoritative Ternforge fleet inventory and repository-control configuration."
 
   type = list(object({
-    repository       = string
-    description      = string
-    visibility       = string
-    has_projects     = bool
-    has_wiki         = bool
-    versioned        = bool
-    release_tag_refs = list(string)
-    topics           = list(string)
+    repository   = string
+    description  = string
+    visibility   = string
+    has_projects = bool
+    has_wiki     = bool
+    versioned    = bool
+    topics       = list(string)
   }))
 
   validation {
@@ -81,13 +80,5 @@ variable "repositories" {
       contains(["public", "private"], repository.visibility)
     ])
     error_message = "Repository visibility must be public or private."
-  }
-
-  validation {
-    condition = alltrue([
-      for repository in var.repositories :
-      repository.versioned ? contains(repository.release_tag_refs, "refs/tags/v*") : length(repository.release_tag_refs) == 0
-    ])
-    error_message = "Versioned repositories must protect refs/tags/v*; unversioned repositories must not declare release tag refs."
   }
 }

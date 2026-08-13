@@ -328,7 +328,7 @@ resource "github_repository_ruleset" "release_tags" {
 
   conditions {
     ref_name {
-      include = each.value.release_tag_refs
+      include = ["refs/tags/v*"]
       exclude = []
     }
   }

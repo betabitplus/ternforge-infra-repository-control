@@ -22,7 +22,7 @@ A repository gets its files before it enters the fleet:
    gh repo create "betabitplus/$repo" --public
    ```
 
-   Use `--private` instead for a private repository.
+   Use `--private` instead for a private repository when its role allows it. For the current nine-repository fleet, do not make `ternforge-infra-repository-control`, `ternforge-infra-updates`, or `ternforge-infra-ci` private: the first two preserve required environment-reviewer gates on GitHub Pro, and public callers require `ternforge-infra-ci` reusable workflows/actions to remain public. The other six current fleet repositories may vary independently.
 3. For a versioned repository, before the first `main` push:
    * create the `release` environment with custom branch policies enabled but no branch pattern yet, so deployment stays fail-closed until enrollment;
    * set `TERNFORGE_RELEASE_CLIENT_ID` from the authoritative repository-control input;
@@ -31,17 +31,19 @@ A repository gets its files before it enters the fleet:
 
    A non-versioned repository skips this step.
 4. Push the prepared initial `main` and verify `.copier-answers.yml`, `main`, and `ci / required`; a versioned repository cannot consume the release environment yet because no branch policy is enrolled.
-5. Add one sorted inventory entry by PR. Permanent OpenTofu `import` blocks adopt the repository and, for versioned repositories, the pre-provisioned `release` environment and `TERNFORGE_RELEASE_CLIENT_ID` variable; the same reviewed apply creates the sole `main` deployment policy, converges App membership, and restricts new `v*` tag creation to the Release App while keeping existing `v*` tags immutable for everyone. Then run or rerun the normal release workflow successfully.
+5. Add one sorted inventory entry by PR. Permanent OpenTofu `import` blocks adopt the repository and, for versioned repositories, the pre-provisioned `release` environment and `TERNFORGE_RELEASE_CLIENT_ID` variable; the same reviewed apply creates the sole `main` deployment policy, converges App membership, creates `TERNFORGE_SOURCE_READ_CLIENT_ID`, and restricts new `v*` tag creation to the Release App while keeping existing `v*` tags immutable for everyone.
+6. If the rendered repository workflow references `TERNFORGE_SOURCE_READ_PRIVATE_KEY`, provision that repository secret only after the enrollment apply has succeeded: restore the current `ternforge-source-read` key from its canonical SOPS/Age escrow, pipe it directly to `gh secret set TERNFORGE_SOURCE_READ_PRIVATE_KEY -R "betabitplus/$repo"`, and delete the plaintext restoration immediately. Do not maintain a second list of source-consuming repositories; the workflow reference itself is the role contract. Then run the normal required CI and release workflow successfully before considering enrollment complete.
 
 Do not add bootstrap flags, `github_repository_file`, an onboarding CLI, or a synthetic bootstrap PR.
 
 ## De-enroll and delete
 
-1. Remove the repository's single inventory entry by PR.
-2. In the protected plan, verify the `github_repository` object is **forgotten**, not destroyed; only its managed controls are destroyed and App memberships shrink.
-3. Apply the reviewed plan and require the built-in post-apply no-drift check to pass.
-4. Read back Release/Renovate/Grafana App membership, then delete the repository separately with GitHub.
-5. Run one final protected no-drift workflow against the remaining fleet.
+1. If the repository contains `TERNFORGE_SOURCE_READ_PRIVATE_KEY`, delete that repository secret before de-enrollment. The App private key can mint read tokens for the remaining installation, so it must not survive in a repository that is about to leave the trusted fleet.
+2. Remove the repository's single inventory entry by PR.
+3. In the protected plan, verify the `github_repository` object is **forgotten**, not destroyed; only its managed controls are destroyed and App memberships shrink.
+4. Apply the reviewed plan and require the built-in post-apply no-drift check to pass.
+5. Read back Release/Renovate/source-read/Grafana App membership, then delete the repository separately with GitHub.
+6. Run one final protected no-drift workflow against the remaining fleet.
 
 Repository deletion is intentionally outside OpenTofu; `lifecycle.destroy = false` prevents de-enrollment from deleting the GitHub repository.
 

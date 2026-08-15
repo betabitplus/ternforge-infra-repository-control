@@ -22,7 +22,7 @@ A repository gets its files before it enters the fleet:
    gh repo create "betabitplus/$repo" --public
    ```
 
-   Use `--private` instead for a private repository when its role allows it. For the current nine-repository fleet, do not make `ternforge-infra-repository-control`, `ternforge-infra-updates`, or `ternforge-infra-ci` private: the first two preserve required environment-reviewer gates on GitHub Pro, and public callers require `ternforge-infra-ci` reusable workflows/actions to remain public. The other six current fleet repositories may vary independently.
+   Use `--private` instead for a private repository when its role allows it. In the current ten-repository fleet, keep `ternforge-infra-repository-control`, `ternforge-infra-updates`, and `ternforge-infra-observability` public because their reviewed apply paths require environment reviewers on GitHub Pro; keep `ternforge-infra-ci` public because public callers require its reusable workflows/actions. The other six repositories may vary independently.
 3. For a versioned repository, before the first `main` push:
    * create the `release` environment with custom branch policies enabled but no branch pattern yet, so deployment stays fail-closed until enrollment;
    * set `TERNFORGE_RELEASE_CLIENT_ID` from the authoritative repository-control input;

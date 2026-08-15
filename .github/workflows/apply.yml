@@ -10,6 +10,7 @@ permissions:
 env:
   SCALR_HOSTNAME: betabitplus-ternforge.scalr.io
   SCALR_SA_EMAIL: ternforge-repository-control-github@betabitplus-ternforge.scalr.io
+  # renovate: datasource=github-releases depName=Scalr/scalr-cli versioning=semver extractVersion=^v(?<version>.*)$
   SCALR_CLI_VERSION: 0.18.0
   SCALR_WORKSPACE_ID: ws-v0pc7dbrm7g2p3aat
 

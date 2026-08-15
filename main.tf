@@ -156,22 +156,6 @@ resource "github_repository_environment" "observability" {
   }
 }
 
-resource "github_repository_environment" "grafana" {
-  repository          = github_repository.managed["betabitplus/ternforge-infra-updates"].name
-  environment         = "grafana"
-  can_admins_bypass   = false
-  prevent_self_review = false
-
-  reviewers {
-    users = [data.github_user.owner.id]
-  }
-
-  deployment_branch_policy {
-    protected_branches     = false
-    custom_branch_policies = true
-  }
-}
-
 resource "github_repository_environment_deployment_policy" "release" {
   for_each = local.versioned_repositories
 
@@ -195,12 +179,6 @@ resource "github_repository_environment_deployment_policy" "renovate" {
 resource "github_repository_environment_deployment_policy" "observability" {
   repository     = github_repository.managed["betabitplus/ternforge-infra-observability"].name
   environment    = github_repository_environment.observability.environment
-  branch_pattern = "main"
-}
-
-resource "github_repository_environment_deployment_policy" "grafana" {
-  repository     = github_repository.managed["betabitplus/ternforge-infra-updates"].name
-  environment    = github_repository_environment.grafana.environment
   branch_pattern = "main"
 }
 
@@ -234,19 +212,19 @@ resource "github_actions_variable" "source_read_client_id" {
 }
 
 resource "github_actions_variable" "grafana_installation_id" {
-  repository    = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  repository    = github_repository.managed["betabitplus/ternforge-infra-observability"].name
   variable_name = "TERNFORGE_GRAFANA_GITHUB_INSTALLATION_ID"
   value         = tostring(var.grafana_app_installation_id)
 }
 
 resource "github_actions_variable" "grafana_app_id" {
-  repository    = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  repository    = github_repository.managed["betabitplus/ternforge-infra-observability"].name
   variable_name = "TERNFORGE_GRAFANA_GITHUB_APP_ID"
   value         = tostring(var.grafana_app_id)
 }
 
 resource "github_actions_variable" "grafana_stack_slug" {
-  repository    = github_repository.managed["betabitplus/ternforge-infra-updates"].name
+  repository    = github_repository.managed["betabitplus/ternforge-infra-observability"].name
   variable_name = "TERNFORGE_GRAFANA_STACK_SLUG"
   value         = var.grafana_stack_slug
 }

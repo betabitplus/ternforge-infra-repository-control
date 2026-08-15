@@ -40,6 +40,11 @@ import {
   id = "${each.value.name}:release"
 }
 
+import {
+  to = github_repository_environment.observability
+  id = "ternforge-infra-observability:observability"
+}
+
 resource "github_repository" "managed" {
   for_each = local.repositories
 
@@ -135,6 +140,22 @@ resource "github_repository_environment" "renovate" {
   }
 }
 
+resource "github_repository_environment" "observability" {
+  repository          = github_repository.managed["betabitplus/ternforge-infra-observability"].name
+  environment         = "observability"
+  can_admins_bypass   = false
+  prevent_self_review = false
+
+  reviewers {
+    users = [data.github_user.owner.id]
+  }
+
+  deployment_branch_policy {
+    protected_branches     = false
+    custom_branch_policies = true
+  }
+}
+
 resource "github_repository_environment" "grafana" {
   repository          = github_repository.managed["betabitplus/ternforge-infra-updates"].name
   environment         = "grafana"
@@ -168,6 +189,12 @@ resource "github_repository_environment_deployment_policy" "repository_control_a
 resource "github_repository_environment_deployment_policy" "renovate" {
   repository     = github_repository.managed["betabitplus/ternforge-infra-updates"].name
   environment    = github_repository_environment.renovate.environment
+  branch_pattern = "main"
+}
+
+resource "github_repository_environment_deployment_policy" "observability" {
+  repository     = github_repository.managed["betabitplus/ternforge-infra-observability"].name
+  environment    = github_repository_environment.observability.environment
   branch_pattern = "main"
 }
 

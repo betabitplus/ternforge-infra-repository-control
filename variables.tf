@@ -72,6 +72,11 @@ variable "repositories" {
   }))
 
   validation {
+    condition     = length(var.repositories) > 0 && length(var.repositories) < 500
+    error_message = "Managed fleet must contain between 1 and 499 repositories."
+  }
+
+  validation {
     condition     = length(var.repositories) == length(distinct([for repository in var.repositories : repository.repository]))
     error_message = "Each managed repository must appear exactly once."
   }

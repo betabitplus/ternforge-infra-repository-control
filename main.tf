@@ -17,6 +17,11 @@ locals {
     for repository, settings in local.repositories : repository => settings
     if settings.versioned
   }
+
+  docs_repositories = {
+    for repository, settings in local.repositories : repository => settings
+    if settings.docs_mode != ""
+  }
 }
 
 import {
@@ -83,6 +88,15 @@ resource "github_repository" "managed" {
   lifecycle {
     destroy = false
   }
+}
+
+
+resource "github_repository_pages" "managed" {
+  for_each = local.docs_repositories
+
+  repository = github_repository.managed[each.key].name
+  build_type = "workflow"
+  public     = true
 }
 
 resource "github_branch_default" "main" {
@@ -209,6 +223,31 @@ resource "github_actions_variable" "source_read_client_id" {
   repository    = github_repository.managed[each.key].name
   variable_name = "TERNFORGE_SOURCE_READ_CLIENT_ID"
   value         = var.source_read_client_id
+}
+
+
+resource "github_actions_variable" "docs_mode" {
+  for_each = local.docs_repositories
+
+  repository    = github_repository.managed[each.key].name
+  variable_name = "TERNFORGE_DOCS_MODE"
+  value         = each.value.docs_mode
+}
+
+resource "github_actions_variable" "docs_runner" {
+  for_each = local.docs_repositories
+
+  repository    = github_repository.managed[each.key].name
+  variable_name = "TERNFORGE_DOCS_RUNNER"
+  value         = each.value.docs_runner
+}
+
+resource "github_actions_variable" "docs_local_environment" {
+  for_each = local.docs_repositories
+
+  repository    = github_repository.managed[each.key].name
+  variable_name = "TERNFORGE_DOCS_LOCAL_ENVIRONMENT"
+  value         = tostring(each.value.docs_local_environment)
 }
 
 resource "github_actions_variable" "grafana_installation_id" {

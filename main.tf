@@ -96,7 +96,6 @@ resource "github_repository_pages" "managed" {
 
   repository = github_repository.managed[each.key].name
   build_type = "workflow"
-  public     = true
 }
 
 resource "github_branch_default" "main" {

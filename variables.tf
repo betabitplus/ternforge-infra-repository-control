@@ -62,13 +62,16 @@ variable "repositories" {
   description = "Single authoritative Ternforge fleet inventory and repository-control configuration."
 
   type = list(object({
-    repository   = string
-    description  = string
-    visibility   = string
-    has_projects = bool
-    has_wiki     = bool
-    versioned    = bool
-    topics       = list(string)
+    repository             = string
+    description            = string
+    visibility             = string
+    has_projects           = bool
+    has_wiki               = bool
+    versioned              = bool
+    topics                 = list(string)
+    docs_mode              = optional(string, "")
+    docs_runner            = optional(string, "")
+    docs_local_environment = optional(bool, false)
   }))
 
   validation {
@@ -100,5 +103,29 @@ variable "repositories" {
       contains(["public", "private"], repository.visibility)
     ])
     error_message = "Repository visibility must be public or private."
+  }
+
+  validation {
+    condition = alltrue([
+      for repository in var.repositories :
+      contains(["", "manual", "release"], repository.docs_mode)
+    ])
+    error_message = "docs_mode must be empty, manual, or release."
+  }
+
+  validation {
+    condition = alltrue([
+      for repository in var.repositories :
+      repository.docs_mode == "" || repository.docs_runner != ""
+    ])
+    error_message = "Docs-enabled repositories must declare docs_runner."
+  }
+
+  validation {
+    condition = alltrue([
+      for repository in var.repositories :
+      !repository.docs_local_environment || repository.docs_mode == "manual"
+    ])
+    error_message = "docs_local_environment is only valid for manual docs mode."
   }
 }

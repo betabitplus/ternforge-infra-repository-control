@@ -22,6 +22,11 @@ locals {
     for repository, settings in local.repositories : repository => settings
     if settings.docs_mode != ""
   }
+
+  release_docs_repositories = {
+    for repository, settings in local.docs_repositories : repository => settings
+    if settings.docs_mode == "release"
+  }
 }
 
 import {
@@ -96,6 +101,16 @@ resource "github_repository_pages" "managed" {
 
   repository = github_repository.managed[each.key].name
   build_type = "workflow"
+}
+
+resource "github_repository_environment_deployment_policy" "docs_release_tags" {
+  for_each = local.release_docs_repositories
+
+  repository  = github_repository.managed[each.key].name
+  environment = "github-pages"
+  tag_pattern = "v*"
+
+  depends_on = [github_repository_pages.managed]
 }
 
 resource "github_branch_default" "main" {
